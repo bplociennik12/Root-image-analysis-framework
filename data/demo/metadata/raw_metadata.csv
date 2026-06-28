@@ -1,0 +1,4 @@
+image_name,sample_id,species,treatment,replicate
+demo_root_001.png,S001,Arabidopsis,control,1
+missing_root.png,S002,Arabidopsis,drought,1
+demo_root_broken.txt,S003,Arabidopsis,control,2
