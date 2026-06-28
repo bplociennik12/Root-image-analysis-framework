@@ -45,3 +45,25 @@ def test_cleaning_pipeline_creates_manifest_and_audit(tmp_path):
     assert paths["clean_manifest"].exists()
     assert paths["audit_log"].exists()
     assert len(audit_events) > 0
+def test_cleaning_pipeline_audit_log_records_text_harmonization(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+    metadata_path = tmp_path / "raw_metadata.csv"
+    output_dir = tmp_path / "out"
+
+    image = np.ones((20, 30, 3), dtype=np.uint8) * 255
+    cv2.imwrite(str(images_dir / "root.png"), image)
+
+    metadata_path.write_text(
+        "image_name,sample_id\n root.png , S001 \n",
+        encoding="utf-8",
+    )
+
+    _, audit_events, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    audit_log = pd.read_csv(paths["audit_log"])
+
+    assert any(audit_log["rule_id"] == "R002_TRIM_TEXT_VALUES")
+    assert any(audit_log["reason"] == "VALUE_STANDARDIZED")
+    assert any(audit_log["step"] == "harmonize_text_values")
+    assert len(audit_events) == len(audit_log)
