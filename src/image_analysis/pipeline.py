@@ -50,7 +50,11 @@ def _failed_measurement(record, reason, message):
     }
 
 
-def run_analysis_pipeline(manifest_path: str | Path, output_dir: str | Path):
+def run_analysis_pipeline(
+    manifest_path: str | Path,
+    output_dir: str | Path,
+    foreground: str = config.FOREGROUND,
+):
     manifest = load_clean_manifest(manifest_path)
     missing_columns = validate_manifest_schema(manifest)
     if missing_columns:
@@ -77,8 +81,8 @@ def run_analysis_pipeline(manifest_path: str | Path, output_dir: str | Path):
             preprocessed = preprocess_image(image, config.GAUSSIAN_BLUR_KERNEL)
 
             processing_events.append(make_processing_event(record_dict, "segmentation", "method", config.SEGMENTATION_METHOD, "success", "OK", "Otsu threshold applied"))
-            processing_events.append(make_processing_event(record_dict, "segmentation", "foreground", config.FOREGROUND, "success", "OK", "Foreground direction recorded"))
-            mask = segment_root_otsu(preprocessed, foreground=config.FOREGROUND)
+            processing_events.append(make_processing_event(record_dict, "segmentation", "foreground", foreground, "success", "OK", "Foreground direction recorded"))
+            mask = segment_root_otsu(preprocessed, foreground=foreground)
 
             processing_events.append(make_processing_event(record_dict, "mask_cleaning", "min_object_size_px", config.MIN_OBJECT_SIZE_PX, "success", "OK", "Small objects removed"))
             processing_events.append(make_processing_event(record_dict, "mask_cleaning", "fill_holes", config.FILL_HOLES, "success", "OK", "Hole filling parameter recorded"))

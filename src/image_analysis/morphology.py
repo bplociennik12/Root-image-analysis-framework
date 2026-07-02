@@ -1,4 +1,6 @@
 import numpy as np
+
+from image_analysis import config
 from skimage.measure import label, regionprops
 
 from image_analysis.skeleton_features import (
@@ -8,7 +10,11 @@ from image_analysis.skeleton_features import (
 )
 
 
-def extract_morphological_features(mask: np.ndarray, skeleton: np.ndarray) -> dict:
+def extract_morphological_features(
+    mask: np.ndarray,
+    skeleton: np.ndarray,
+    max_mask_area_fraction: float = config.MAX_MASK_AREA_FRACTION,
+) -> dict:
     mask_bool = mask.astype(bool)
     labeled = label(mask_bool)
     component_count = int(labeled.max())
@@ -40,16 +46,24 @@ def extract_morphological_features(mask: np.ndarray, skeleton: np.ndarray) -> di
     centroid_y, centroid_x = all_coords.mean(axis=0)
     aspect_ratio = float(bbox_width / bbox_height) if bbox_height else 0.0
 
-    status = "warning" if component_count > 1 else "success"
-    reason = "MULTIPLE_COMPONENTS" if component_count > 1 else "OK"
-    message = (
-        "Multiple mask components detected; full cleaned mask was analyzed."
-        if component_count > 1
-        else "Features extracted successfully."
-    )
+    area_px = int(np.count_nonzero(mask_bool))
+    mask_area_fraction = area_px / mask_bool.size if mask_bool.size else 0.0
+
+    if mask_area_fraction > max_mask_area_fraction:
+        status = "warning"
+        reason = "MASK_TOO_LARGE"
+        message = "Segmentation mask covers too much of the image."
+    elif component_count > 1:
+        status = "warning"
+        reason = "MULTIPLE_COMPONENTS"
+        message = "Multiple mask components detected; full cleaned mask was analyzed."
+    else:
+        status = "success"
+        reason = "OK"
+        message = "Features extracted successfully."
 
     return {
-        "area_px": int(np.count_nonzero(mask_bool)),
+        "area_px": area_px,
         "skeleton_length_px": count_skeleton_length(skeleton),
         "branch_points_count": count_branch_points(skeleton),
         "endpoints_count": count_endpoints(skeleton),

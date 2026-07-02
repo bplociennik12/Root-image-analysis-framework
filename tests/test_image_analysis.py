@@ -47,3 +47,22 @@ def test_multiple_components_returns_warning():
     assert features["component_count"] == 2
     assert features["processing_status"] == "warning"
     assert features["reason"] == "MULTIPLE_COMPONENTS"
+
+def test_extract_morphological_features_warns_when_mask_is_too_large():
+    import numpy as np
+
+    from image_analysis.morphology import extract_morphological_features
+
+    mask = np.ones((10, 10), dtype=bool)
+    skeleton = np.zeros((10, 10), dtype=bool)
+
+    features = extract_morphological_features(
+        mask,
+        skeleton,
+        max_mask_area_fraction=0.60,
+    )
+
+    assert features["area_px"] == 100
+    assert features["processing_status"] == "warning"
+    assert features["reason"] == "MASK_TOO_LARGE"
+    assert features["message"] == "Segmentation mask covers too much of the image."
