@@ -67,3 +67,15 @@ def test_cleaning_pipeline_audit_log_records_text_harmonization(tmp_path):
     assert any(audit_log["reason"] == "VALUE_STANDARDIZED")
     assert any(audit_log["step"] == "harmonize_text_values")
     assert len(audit_events) == len(audit_log)
+
+def test_harmonize_text_values_records_empty_value_normalization():
+    df = pd.DataFrame({"image_name": ["root.png"], "sample_id": ["   "]})
+
+    result, events = harmonize_text_values(df)
+
+    assert pd.isna(result.loc[0, "sample_id"])
+    assert len(events) == 1
+    assert events[0]["rule_id"] == "R003_NORMALIZE_EMPTY_VALUES"
+    assert events[0]["reason"] == "EMPTY_VALUE_NORMALIZED"
+    assert events[0]["step"] == "harmonize_text_values"
+    assert events[0]["action"] == "normalize_value"
