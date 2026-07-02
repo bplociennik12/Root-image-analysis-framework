@@ -79,3 +79,26 @@ def test_harmonize_text_values_records_empty_value_normalization():
     assert events[0]["reason"] == "EMPTY_VALUE_NORMALIZED"
     assert events[0]["step"] == "harmonize_text_values"
     assert events[0]["action"] == "normalize_value"
+
+def test_validate_required_values_records_missing_image_name_and_sample_id():
+    from data_cleaning.validation import validate_required_values
+
+    df = pd.DataFrame(
+        {
+            "image_name": ["", "root.png"],
+            "sample_id": ["S001", ""],
+        }
+    )
+
+    events = validate_required_values(df)
+
+    assert len(events) == 2
+    assert events[0]["reason"] == "MISSING_IMAGE_NAME"
+    assert events[0]["rule_id"] == "R005_VALIDATE_REQUIRED_VALUES"
+    assert events[0]["status"] == "failed"
+    assert events[0]["action"] == "validate"
+
+    assert events[1]["reason"] == "MISSING_SAMPLE_ID"
+    assert events[1]["rule_id"] == "R005_VALIDATE_REQUIRED_VALUES"
+    assert events[1]["status"] == "failed"
+    assert events[1]["action"] == "validate"
