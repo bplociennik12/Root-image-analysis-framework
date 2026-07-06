@@ -66,3 +66,58 @@ def test_extract_morphological_features_warns_when_mask_is_too_large():
     assert features["processing_status"] == "warning"
     assert features["reason"] == "MASK_TOO_LARGE"
     assert features["message"] == "Segmentation mask covers too much of the image."
+
+def test_analysis_pipeline_logs_max_mask_area_fraction(tmp_path):
+    import cv2
+    import pandas as pd
+
+    from image_analysis.pipeline import run_analysis_pipeline
+
+    image_path = tmp_path / "root.png"
+    manifest_path = tmp_path / "clean_manifest.csv"
+    output_dir = tmp_path / "analysis"
+
+    image = np.ones((40, 40, 3), dtype=np.uint8) * 255
+    cv2.line(image, (20, 5), (20, 35), (0, 0, 0), 2)
+    cv2.imwrite(str(image_path), image)
+
+    manifest = pd.DataFrame(
+        [
+            {
+                "record_id": 0,
+                "image_id": "IMG_TEST",
+                "image_name_original": "root.png",
+                "image_name_clean": "root.png",
+                "image_path": str(image_path),
+                "sample_id_original": "S001",
+                "sample_id_clean": "S001",
+                "file_format": "png",
+                "width_px": 40,
+                "height_px": 40,
+                "is_valid": True,
+                "record_status": "valid",
+                "reason": "OK",
+                "message": "Record is ready for analysis",
+                "audit_events_count": 0,
+            }
+        ]
+    )
+    manifest.to_csv(manifest_path, index=False)
+
+    _, _, paths = run_analysis_pipeline(
+        manifest_path,
+        output_dir,
+        foreground="dark",
+    )
+
+    processing_log = pd.read_csv(paths["processing_log"])
+
+    matching_rows = processing_log[
+        (processing_log["step"] == "mask_quality")
+        & (processing_log["parameter"] == "max_mask_area_fraction")
+    ]
+
+    assert len(matching_rows) == 1
+    assert float(matching_rows.iloc[0]["value"]) == 0.6
+    assert matching_rows.iloc[0]["status"] == "success"
+    assert matching_rows.iloc[0]["reason"] == "OK"

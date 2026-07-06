@@ -96,6 +96,7 @@ def run_analysis_pipeline(
             skeleton = skeletonize_mask(cleaned_mask)
             processing_events.append(make_processing_event(record_dict, "skeletonization", "method", "skimage.skeletonize", "success", "OK", "Skeleton created"))
 
+            processing_events.append(make_processing_event(record_dict, "mask_quality", "max_mask_area_fraction", config.MAX_MASK_AREA_FRACTION, "success", "OK", "Maximum allowed mask area fraction recorded"))
             features = extract_morphological_features(cleaned_mask, skeleton)
             row = {
                 "record_id": record["record_id"],
