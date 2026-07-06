@@ -165,6 +165,11 @@ def test_export_analysis_summary_counts_mask_too_large(tmp_path):
         measurements=measurements,
         processing_events=[],
         output_dir=tmp_path,
+        summary_metadata={
+            "manifest_records": 3,
+            "records_selected_for_analysis": 1,
+            "records_skipped_not_valid": 2,
+        },
     )
 
     summary = pd.read_csv(paths["analysis_summary"])
@@ -172,3 +177,6 @@ def test_export_analysis_summary_counts_mask_too_large(tmp_path):
 
     assert summary_values["mask_too_large"] == 1
     assert summary_values["analysis_warning"] == 1
+    assert summary_values["manifest_records"] == 3
+    assert summary_values["records_selected_for_analysis"] == 1
+    assert summary_values["records_skipped_not_valid"] == 2

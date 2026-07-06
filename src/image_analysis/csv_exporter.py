@@ -8,6 +8,7 @@ def export_analysis_outputs(
     measurements: list[dict],
     processing_events: list[dict],
     output_dir: str | Path,
+    summary_metadata: dict | None = None,
 ) -> dict[str, Path]:
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -21,9 +22,14 @@ def export_analysis_outputs(
 
     pd.DataFrame(processing_events).reindex(columns=PROCESSING_LOG_COLUMNS).to_csv(processing_log_path, index=False)
 
+    summary_metadata = summary_metadata or {}
+
     summary = pd.DataFrame(
         [
             {"metric": "input_records", "value": len(measurements_df)},
+            {"metric": "manifest_records", "value": int(summary_metadata.get("manifest_records", len(measurements_df)))},
+            {"metric": "records_selected_for_analysis", "value": int(summary_metadata.get("records_selected_for_analysis", len(measurements_df)))},
+            {"metric": "records_skipped_not_valid", "value": int(summary_metadata.get("records_skipped_not_valid", 0))},
             {"metric": "analysis_success", "value": int((measurements_df["processing_status"] == "success").sum())},
             {"metric": "analysis_warning", "value": int((measurements_df["processing_status"] == "warning").sum())},
             {"metric": "analysis_failed", "value": int((measurements_df["processing_status"] == "failed").sum())},

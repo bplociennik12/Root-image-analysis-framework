@@ -123,5 +123,15 @@ def run_analysis_pipeline(
             measurements.append(_failed_measurement(record_dict, "UNKNOWN_ERROR", message))
             processing_events.append(make_processing_event(record_dict, "analysis", "exception", message, "failed", "UNKNOWN_ERROR", message))
 
-    paths = export_analysis_outputs(measurements, processing_events, output)
+    summary_metadata = {
+        "manifest_records": len(manifest),
+        "records_selected_for_analysis": len(valid_records),
+        "records_skipped_not_valid": len(manifest) - len(valid_records),
+    }
+    paths = export_analysis_outputs(
+        measurements,
+        processing_events,
+        output,
+        summary_metadata=summary_metadata,
+    )
     return measurements, processing_events, paths
