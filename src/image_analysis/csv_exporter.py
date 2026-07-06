@@ -29,6 +29,7 @@ def export_analysis_outputs(
             {"metric": "analysis_failed", "value": int((measurements_df["processing_status"] == "failed").sum())},
             {"metric": "empty_masks", "value": int((measurements_df["reason"] == "EMPTY_MASK").sum())},
             {"metric": "multiple_components", "value": int((measurements_df["reason"] == "MULTIPLE_COMPONENTS").sum())},
+            {"metric": "mask_too_large", "value": int((measurements_df["reason"] == "MASK_TOO_LARGE").sum())},
             {"metric": "mean_area_px", "value": float(measurements_df["area_px"].mean()) if len(measurements_df) else 0},
             {"metric": "mean_skeleton_length_px", "value": float(measurements_df["skeleton_length_px"].mean()) if len(measurements_df) else 0},
         ]

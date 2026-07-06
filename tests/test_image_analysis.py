@@ -121,3 +121,43 @@ def test_analysis_pipeline_logs_max_mask_area_fraction(tmp_path):
     assert float(matching_rows.iloc[0]["value"]) == 0.6
     assert matching_rows.iloc[0]["status"] == "success"
     assert matching_rows.iloc[0]["reason"] == "OK"
+
+def test_export_analysis_summary_counts_mask_too_large(tmp_path):
+    import pandas as pd
+
+    from image_analysis.csv_exporter import export_analysis_outputs
+
+    measurements = [
+        {
+            "record_id": 0,
+            "image_id": "IMG_001",
+            "image_name": "root_001.png",
+            "sample_id": "S001",
+            "roi_used": False,
+            "area_px": 100,
+            "skeleton_length_px": 20,
+            "branch_points_count": 0,
+            "endpoints_count": 2,
+            "bbox_width_px": 10,
+            "bbox_height_px": 20,
+            "aspect_ratio": 0.5,
+            "centroid_x_px": 5,
+            "centroid_y_px": 10,
+            "component_count": 1,
+            "processing_status": "warning",
+            "reason": "MASK_TOO_LARGE",
+            "message": "Segmentation mask covers too much of the image.",
+        }
+    ]
+
+    paths = export_analysis_outputs(
+        measurements=measurements,
+        processing_events=[],
+        output_dir=tmp_path,
+    )
+
+    summary = pd.read_csv(paths["analysis_summary"])
+    summary_values = dict(zip(summary["metric"], summary["value"]))
+
+    assert summary_values["mask_too_large"] == 1
+    assert summary_values["analysis_warning"] == 1
