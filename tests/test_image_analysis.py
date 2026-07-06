@@ -122,6 +122,17 @@ def test_analysis_pipeline_logs_max_mask_area_fraction(tmp_path):
     assert matching_rows.iloc[0]["status"] == "success"
     assert matching_rows.iloc[0]["reason"] == "OK"
 
+    area_fraction_rows = processing_log[
+        (processing_log["step"] == "mask_quality")
+        & (processing_log["parameter"] == "mask_area_fraction")
+    ]
+
+    assert len(area_fraction_rows) == 1
+    mask_area_fraction = float(area_fraction_rows.iloc[0]["value"])
+    assert 0.0 <= mask_area_fraction <= 1.0
+    assert area_fraction_rows.iloc[0]["status"] in {"success", "warning", "failed"}
+    assert area_fraction_rows.iloc[0]["reason"] in {"OK", "MULTIPLE_COMPONENTS", "MASK_TOO_LARGE", "EMPTY_MASK"}
+
 def test_export_analysis_summary_counts_mask_too_large(tmp_path):
     import pandas as pd
 

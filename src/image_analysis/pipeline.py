@@ -98,6 +98,7 @@ def run_analysis_pipeline(
 
             processing_events.append(make_processing_event(record_dict, "mask_quality", "max_mask_area_fraction", config.MAX_MASK_AREA_FRACTION, "success", "OK", "Maximum allowed mask area fraction recorded"))
             features = extract_morphological_features(cleaned_mask, skeleton)
+            processing_events.append(make_processing_event(record_dict, "mask_quality", "mask_area_fraction", features["mask_area_fraction"], features["processing_status"], features["reason"], features["message"]))
             row = {
                 "record_id": record["record_id"],
                 "image_id": record["image_id"],
