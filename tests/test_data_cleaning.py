@@ -516,3 +516,32 @@ def test_audit_log_records_valid_image_dimensions(tmp_path):
     assert event["output_value"] == "30x20"
     assert event["message"] == "Image dimensions extracted"
 
+def test_cleaning_summary_counts_valid_image(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    image = np.ones((20, 30, 3), dtype=np.uint8) * 255
+    cv2.imwrite(str(images_dir / "valid.png"), image)
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "valid.png,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    summary = pd.read_csv(paths["cleaning_summary"])
+    summary_values = dict(zip(summary["metric"], summary["value"]))
+
+    assert summary_values["total_records"] == 1
+    assert summary_values["valid_records"] == 1
+    assert summary_values["warning_records"] == 0
+    assert summary_values["rejected_records"] == 0
+    assert summary_values["missing_files"] == 0
+    assert summary_values["unsupported_formats"] == 0
+    assert summary_values["corrupted_images"] == 0
+
