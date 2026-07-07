@@ -338,3 +338,32 @@ def test_rejected_records_contains_unsupported_format_reason(tmp_path):
     assert rejected_records.loc[0, "image_name_clean"] == "root.txt"
     assert rejected_records.loc[0, "sample_id_clean"] == "S001"
 
+def test_rejected_records_contains_corrupted_image_reason(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    broken_image = images_dir / "broken.png"
+    broken_image.write_text(
+        "this is not a real image file",
+        encoding="utf-8",
+    )
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "broken.png,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    rejected_records = pd.read_csv(paths["rejected_records"])
+
+    assert len(rejected_records) == 1
+    assert rejected_records.loc[0, "record_status"] == "rejected"
+    assert rejected_records.loc[0, "reason"] == "CORRUPTED_IMAGE"
+    assert rejected_records.loc[0, "image_name_clean"] == "broken.png"
+    assert rejected_records.loc[0, "sample_id_clean"] == "S001"
+
