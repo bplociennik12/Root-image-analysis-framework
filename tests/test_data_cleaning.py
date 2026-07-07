@@ -259,3 +259,27 @@ def test_audit_log_records_corrupted_image_rejection(tmp_path):
     assert event["sample_id"] == "S001"
     assert "Image could not be opened" in event["message"]
 
+def test_cleaning_summary_counts_unsupported_formats(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "root.txt,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    summary = pd.read_csv(paths["cleaning_summary"])
+    summary_values = dict(zip(summary["metric"], summary["value"]))
+
+    assert summary_values["total_records"] == 1
+    assert summary_values["valid_records"] == 0
+    assert summary_values["rejected_records"] == 1
+    assert summary_values["unsupported_formats"] == 1
+    assert summary_values["missing_files"] == 0
+    assert summary_values["corrupted_images"] == 0
