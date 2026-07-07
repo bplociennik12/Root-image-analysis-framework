@@ -217,3 +217,45 @@ def test_audit_log_records_unsupported_format_rejection(tmp_path):
     assert event["input_value"] == "txt"
     assert "Unsupported image format: txt" in event["message"]
 
+def test_audit_log_records_corrupted_image_rejection(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    broken_image = images_dir / "broken.png"
+    broken_image.write_text(
+        "this is not a real image file",
+        encoding="utf-8",
+    )
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "broken.png,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "cleaning_output"
+
+    run_cleaning_pipeline(
+        metadata_path=metadata_path,
+        images_dir=images_dir,
+        output_dir=output_dir,
+    )
+
+    audit_log = pd.read_csv(output_dir / "audit_log.csv")
+
+    corrupted_image_events = audit_log[
+        (audit_log["reason"] == "CORRUPTED_IMAGE")
+        & (audit_log["step"] == "validate_image_readable")
+        & (audit_log["status"] == "failed")
+    ]
+
+    assert len(corrupted_image_events) == 1
+
+    event = corrupted_image_events.iloc[0]
+    assert event["rule_id"] == "R009_VALIDATE_IMAGE_READABLE"
+    assert event["action"] == "read_image"
+    assert event["image_name"] == "broken.png"
+    assert event["sample_id"] == "S001"
+    assert "Image could not be opened" in event["message"]
+
