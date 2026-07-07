@@ -480,3 +480,39 @@ def test_clean_manifest_records_valid_image_metadata(tmp_path):
     assert manifest.loc[0, "height_px"] == 20
     assert manifest.loc[0, "audit_events_count"] > 0
 
+def test_audit_log_records_valid_image_dimensions(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    image = np.ones((20, 30, 3), dtype=np.uint8) * 255
+    cv2.imwrite(str(images_dir / "valid.png"), image)
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "valid.png,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    audit_log = pd.read_csv(paths["audit_log"])
+
+    dimension_events = audit_log[
+        (audit_log["step"] == "extract_image_dimensions")
+        & (audit_log["status"] == "success")
+        & (audit_log["reason"] == "OK")
+    ]
+
+    assert len(dimension_events) == 1
+
+    event = dimension_events.iloc[0]
+    assert event["rule_id"] == "R010_EXTRACT_IMAGE_DIMENSIONS"
+    assert event["action"] == "extract_metadata"
+    assert event["image_name"] == "valid.png"
+    assert event["sample_id"] == "S001"
+    assert event["output_value"] == "30x20"
+    assert event["message"] == "Image dimensions extracted"
+
