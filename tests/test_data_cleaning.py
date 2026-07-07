@@ -545,3 +545,39 @@ def test_cleaning_summary_counts_valid_image(tmp_path):
     assert summary_values["unsupported_formats"] == 0
     assert summary_values["corrupted_images"] == 0
 
+def test_rejected_records_empty_with_columns_when_all_records_valid(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    image = np.ones((20, 30, 3), dtype=np.uint8) * 255
+    cv2.imwrite(str(images_dir / "valid.png"), image)
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "valid.png,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    rejected_records = pd.read_csv(paths["rejected_records"])
+
+    expected_columns = [
+        "record_id",
+        "image_id",
+        "image_name_original",
+        "image_name_clean",
+        "image_path",
+        "sample_id_original",
+        "sample_id_clean",
+        "record_status",
+        "reason",
+        "message",
+    ]
+
+    assert list(rejected_records.columns) == expected_columns
+    assert len(rejected_records) == 0
+
