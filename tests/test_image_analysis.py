@@ -180,3 +180,23 @@ def test_export_analysis_summary_counts_mask_too_large(tmp_path):
     assert summary_values["manifest_records"] == 3
     assert summary_values["records_selected_for_analysis"] == 1
     assert summary_values["records_skipped_not_valid"] == 2
+
+def test_select_valid_records_returns_only_valid_rows():
+    import pandas as pd
+
+    from image_analysis.load_manifest import select_valid_records
+
+    df = pd.DataFrame(
+        [
+            {"record_id": 0, "record_status": "valid"},
+            {"record_id": 1, "record_status": "warning"},
+            {"record_id": 2, "record_status": "rejected"},
+            {"record_id": 3, "record_status": "valid"},
+        ]
+    )
+
+    result = select_valid_records(df)
+
+    assert len(result) == 2
+    assert set(result["record_id"]) == {0, 3}
+    assert set(result["record_status"]) == {"valid"}
