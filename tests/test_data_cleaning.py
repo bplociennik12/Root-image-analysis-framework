@@ -665,3 +665,37 @@ def test_clean_manifest_has_required_columns_for_valid_record(tmp_path):
     assert manifest.loc[0, "record_status"] == "valid"
     assert manifest.loc[0, "reason"] == "OK"
 
+def test_cleaning_summary_has_required_metrics(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    image = np.ones((20, 30, 3), dtype=np.uint8) * 255
+    cv2.imwrite(str(images_dir / "valid.png"), image)
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "valid.png,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    summary = pd.read_csv(paths["cleaning_summary"])
+
+    expected_metrics = {
+        "total_records",
+        "valid_records",
+        "warning_records",
+        "rejected_records",
+        "missing_files",
+        "unsupported_formats",
+        "corrupted_images",
+        "missing_sample_id",
+    }
+
+    assert list(summary.columns) == ["metric", "value"]
+    assert expected_metrics.issubset(set(summary["metric"]))
+
