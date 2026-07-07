@@ -180,3 +180,40 @@ def test_audit_log_records_missing_file_rejection(tmp_path):
     assert event["sample_id"] == "S001"
     assert "Image file not found at path:" in event["message"]
 
+def test_audit_log_records_unsupported_format_rejection(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "root.txt,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "cleaning_output"
+
+    run_cleaning_pipeline(
+        metadata_path=metadata_path,
+        images_dir=images_dir,
+        output_dir=output_dir,
+    )
+
+    audit_log = pd.read_csv(output_dir / "audit_log.csv")
+
+    unsupported_format_events = audit_log[
+        (audit_log["reason"] == "UNSUPPORTED_FORMAT")
+        & (audit_log["step"] == "validate_file_extension")
+        & (audit_log["status"] == "failed")
+    ]
+
+    assert len(unsupported_format_events) == 1
+
+    event = unsupported_format_events.iloc[0]
+    assert event["rule_id"] == "R007_VALIDATE_FILE_EXTENSION"
+    assert event["action"] == "validate"
+    assert event["image_name"] == "root.txt"
+    assert event["sample_id"] == "S001"
+    assert event["input_value"] == "txt"
+    assert "Unsupported image format: txt" in event["message"]
+
