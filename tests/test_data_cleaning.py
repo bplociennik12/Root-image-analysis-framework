@@ -421,3 +421,31 @@ def test_clean_manifest_keeps_corrupted_image_rejection(tmp_path):
     assert manifest.loc[0, "sample_id_clean"] == "S001"
     assert manifest.loc[0, "is_valid"] == False
 
+def test_clean_manifest_audit_events_count_matches_audit_log(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "missing.png,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    manifest = pd.read_csv(paths["clean_manifest"])
+    audit_log = pd.read_csv(paths["audit_log"])
+
+    record_id = manifest.loc[0, "record_id"]
+
+    audit_events_for_record = audit_log[
+        audit_log["record_id"].astype(str) == str(record_id)
+    ]
+
+    assert len(manifest) == 1
+    assert len(audit_events_for_record) > 0
+    assert manifest.loc[0, "audit_events_count"] == len(audit_events_for_record)
+
