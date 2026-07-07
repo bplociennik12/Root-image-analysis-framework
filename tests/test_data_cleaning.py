@@ -315,3 +315,26 @@ def test_cleaning_summary_counts_corrupted_images(tmp_path):
     assert summary_values["missing_files"] == 0
     assert summary_values["unsupported_formats"] == 0
 
+def test_rejected_records_contains_unsupported_format_reason(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "root.txt,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    rejected_records = pd.read_csv(paths["rejected_records"])
+
+    assert len(rejected_records) == 1
+    assert rejected_records.loc[0, "record_status"] == "rejected"
+    assert rejected_records.loc[0, "reason"] == "UNSUPPORTED_FORMAT"
+    assert rejected_records.loc[0, "image_name_clean"] == "root.txt"
+    assert rejected_records.loc[0, "sample_id_clean"] == "S001"
+
