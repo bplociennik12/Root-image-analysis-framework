@@ -367,3 +367,27 @@ def test_rejected_records_contains_corrupted_image_reason(tmp_path):
     assert rejected_records.loc[0, "image_name_clean"] == "broken.png"
     assert rejected_records.loc[0, "sample_id_clean"] == "S001"
 
+def test_clean_manifest_keeps_unsupported_format_rejection(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "root.txt,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "out"
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    manifest = pd.read_csv(paths["clean_manifest"])
+
+    assert len(manifest) == 1
+    assert manifest.loc[0, "record_status"] == "rejected"
+    assert manifest.loc[0, "reason"] == "UNSUPPORTED_FORMAT"
+    assert manifest.loc[0, "image_name_clean"] == "root.txt"
+    assert manifest.loc[0, "sample_id_clean"] == "S001"
+    assert manifest.loc[0, "is_valid"] == False
+
