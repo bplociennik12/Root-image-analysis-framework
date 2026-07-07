@@ -102,3 +102,23 @@ def test_validate_required_values_records_missing_image_name_and_sample_id():
     assert events[1]["rule_id"] == "R005_VALIDATE_REQUIRED_VALUES"
     assert events[1]["status"] == "failed"
     assert events[1]["action"] == "validate"
+
+def test_cleaning_pipeline_exports_rejected_records_with_reason(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+    metadata_path = tmp_path / "raw_metadata.csv"
+    output_dir = tmp_path / "out"
+
+    metadata_path.write_text(
+        "image_name,sample_id\nmissing.png,S002\n",
+        encoding="utf-8",
+    )
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    rejected_records = pd.read_csv(paths["rejected_records"])
+
+    assert len(rejected_records) == 1
+    assert rejected_records.loc[0, "image_name_clean"] == "missing.png"
+    assert rejected_records.loc[0, "record_status"] == "rejected"
+    assert rejected_records.loc[0, "reason"] == "MISSING_FILE"
