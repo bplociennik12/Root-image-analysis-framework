@@ -143,3 +143,40 @@ def test_cleaning_summary_counts_rejected_and_missing_files(tmp_path):
     assert summary_values["valid_records"] == 0
     assert summary_values["rejected_records"] == 1
     assert summary_values["missing_files"] == 1
+
+def test_audit_log_records_missing_file_rejection(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+
+    metadata_path = tmp_path / "raw_metadata.csv"
+    metadata_path.write_text(
+        "image_name,sample_id\n"
+        "missing.png,S001\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "cleaning_output"
+
+    run_cleaning_pipeline(
+        metadata_path=metadata_path,
+        images_dir=images_dir,
+        output_dir=output_dir,
+    )
+
+    audit_log = pd.read_csv(output_dir / "audit_log.csv")
+
+    missing_file_events = audit_log[
+        (audit_log["reason"] == "MISSING_FILE")
+        & (audit_log["step"] == "validate_image_exists")
+        & (audit_log["status"] == "failed")
+    ]
+
+    assert len(missing_file_events) == 1
+
+    event = missing_file_events.iloc[0]
+    assert event["rule_id"] == "R008_VALIDATE_IMAGE_EXISTS"
+    assert event["action"] == "validate"
+    assert event["image_name"] == "missing.png"
+    assert event["sample_id"] == "S001"
+    assert "Image file not found at path:" in event["message"]
+
