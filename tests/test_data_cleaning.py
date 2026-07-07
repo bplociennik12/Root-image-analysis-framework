@@ -122,3 +122,24 @@ def test_cleaning_pipeline_exports_rejected_records_with_reason(tmp_path):
     assert rejected_records.loc[0, "image_name_clean"] == "missing.png"
     assert rejected_records.loc[0, "record_status"] == "rejected"
     assert rejected_records.loc[0, "reason"] == "MISSING_FILE"
+
+def test_cleaning_summary_counts_rejected_and_missing_files(tmp_path):
+    images_dir = tmp_path / "images"
+    images_dir.mkdir()
+    metadata_path = tmp_path / "raw_metadata.csv"
+    output_dir = tmp_path / "out"
+
+    metadata_path.write_text(
+        "image_name,sample_id\nmissing.png,S002\n",
+        encoding="utf-8",
+    )
+
+    _, _, paths = run_cleaning_pipeline(metadata_path, images_dir, output_dir)
+
+    summary = pd.read_csv(paths["cleaning_summary"])
+    summary_values = dict(zip(summary["metric"], summary["value"]))
+
+    assert summary_values["total_records"] == 1
+    assert summary_values["valid_records"] == 0
+    assert summary_values["rejected_records"] == 1
+    assert summary_values["missing_files"] == 1
