@@ -3,6 +3,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from data_cleaning.pipeline import run_cleaning_pipeline
+
 
 DEFAULT_CLEANING_DIR = Path("outputs/cleaning_demo_check")
 DEFAULT_ANALYSIS_DIR = Path("outputs/analysis_demo_check")
@@ -243,7 +245,56 @@ analysis_dir = Path(
     )
 )
 
-tab_cleaning, tab_analysis = st.tabs(["Data Cleaning Results", "Image Analysis Results"])
+tab_run_cleaning, tab_cleaning, tab_analysis = st.tabs(
+    ["Run Cleaning", "Data Cleaning Results", "Image Analysis Results"]
+)
+
+with tab_run_cleaning:
+    st.header("Run Data Cleaning Pipeline")
+    show_transparency_note(
+        "This tab calls the existing run_cleaning_pipeline(...) function. "
+        "Cleaning decisions and automatic changes are exported to CSV files, "
+        "including clean_manifest.csv, rejected_records.csv and audit_log.csv."
+    )
+
+    with st.form("run_cleaning_form"):
+        metadata_path = st.text_input(
+            "Raw metadata CSV path",
+            value="data/demo/metadata/raw_metadata.csv",
+        )
+        images_dir = st.text_input(
+            "Images directory",
+            value="data/demo/images",
+        )
+        cleaning_output_dir = st.text_input(
+            "Cleaning output directory",
+            value=str(DEFAULT_CLEANING_DIR),
+        )
+
+        submitted = st.form_submit_button("Run cleaning pipeline")
+
+    if submitted:
+        try:
+            manifest, audit_events, paths = run_cleaning_pipeline(
+                metadata_path=metadata_path,
+                images_dir=images_dir,
+                output_dir=cleaning_output_dir,
+            )
+
+            st.success("Cleaning pipeline finished.")
+            st.write(f"Records in clean manifest: {len(manifest)}")
+            st.write(f"Audit events: {len(audit_events)}")
+            st.json({key: str(value) for key, value in paths.items()})
+
+            st.info(
+                "To view these results in the Data Cleaning Results tab, "
+                "set the sidebar Cleaning output directory to the same output path."
+            )
+
+        except Exception as exc:
+            st.error("Cleaning pipeline failed.")
+            st.exception(exc)
+
 
 with tab_cleaning:
     st.header("Data Cleaning Results")
