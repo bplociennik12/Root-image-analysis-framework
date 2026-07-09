@@ -200,6 +200,16 @@ with tab_cleaning:
     show_csv_section(
         "Clean manifest",
         cleaning_dir / "clean_manifest.csv",
+        filter_columns=[
+            "record_status",
+            "reason",
+            "image_id",
+            "image_name_clean",
+            "sample_id_clean",
+            "file_format",
+            "is_valid",
+        ],
+        key_prefix="clean_manifest",
     )
     show_csv_section(
         "Rejected records",
@@ -228,6 +238,15 @@ with tab_analysis:
     show_csv_section(
         "Root measurements",
         analysis_dir / "root_measurements.csv",
+        filter_columns=[
+            "processing_status",
+            "reason",
+            "image_id",
+            "image_name",
+            "sample_id",
+            "component_count",
+        ],
+        key_prefix="root_measurements",
     )
     show_csv_section(
         "Processing log",
