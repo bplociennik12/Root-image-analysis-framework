@@ -20,7 +20,48 @@ def read_csv_if_exists(path: Path) -> pd.DataFrame | None:
     return pd.read_csv(path)
 
 
-def show_csv_section(title: str, path: Path) -> None:
+def filter_dataframe(
+    df: pd.DataFrame,
+    filter_columns: list[str],
+    key_prefix: str,
+) -> pd.DataFrame:
+    filtered = df.copy()
+
+    available_columns = [column for column in filter_columns if column in filtered.columns]
+    if not available_columns:
+        return filtered
+
+    with st.expander("Filters", expanded=False):
+        for column in available_columns:
+            values = (
+                filtered[column]
+                .dropna()
+                .astype(str)
+                .sort_values()
+                .unique()
+                .tolist()
+            )
+
+            selected_values = st.multiselect(
+                label=f"Filter by {column}",
+                options=values,
+                key=f"{key_prefix}_{column}",
+            )
+
+            if selected_values:
+                filtered = filtered[
+                    filtered[column].astype(str).isin(selected_values)
+                ]
+
+    return filtered
+
+
+def show_csv_section(
+    title: str,
+    path: Path,
+    filter_columns: list[str] | None = None,
+    key_prefix: str | None = None,
+) -> None:
     st.subheader(title)
     st.caption(str(path))
 
@@ -29,8 +70,24 @@ def show_csv_section(title: str, path: Path) -> None:
         st.warning(f"File not found: {path}")
         return
 
-    st.dataframe(df, use_container_width=True)
-    st.caption(f"Rows: {len(df)} | Columns: {len(df.columns)}")
+    if filter_columns is not None:
+        filtered_df = filter_dataframe(
+            df=df,
+            filter_columns=filter_columns,
+            key_prefix=key_prefix or title.lower().replace(" ", "_"),
+        )
+    else:
+        filtered_df = df
+
+    st.dataframe(filtered_df, use_container_width=True)
+
+    if len(filtered_df) == len(df):
+        st.caption(f"Rows: {len(df)} | Columns: {len(df.columns)}")
+    else:
+        st.caption(
+            f"Filtered rows: {len(filtered_df)} / {len(df)} | "
+            f"Columns: {len(df.columns)}"
+        )
 
 
 def image_id_from_output_name(path: Path) -> str:
@@ -151,6 +208,14 @@ with tab_cleaning:
     show_csv_section(
         "Audit log",
         cleaning_dir / "audit_log.csv",
+        filter_columns=[
+            "record_id",
+            "image_name",
+            "step",
+            "status",
+            "reason",
+        ],
+        key_prefix="audit_log",
     )
 
 with tab_analysis:
@@ -167,5 +232,13 @@ with tab_analysis:
     show_csv_section(
         "Processing log",
         analysis_dir / "processing_log.csv",
+        filter_columns=[
+            "record_id",
+            "image_name",
+            "step",
+            "status",
+            "reason",
+        ],
+        key_prefix="processing_log",
     )
     show_image_outputs(analysis_dir)
