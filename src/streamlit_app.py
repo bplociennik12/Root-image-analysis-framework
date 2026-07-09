@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from data_cleaning.pipeline import run_cleaning_pipeline
+from image_analysis.pipeline import run_analysis_pipeline
 
 
 DEFAULT_CLEANING_DIR = Path("outputs/cleaning_demo_check")
@@ -245,8 +246,8 @@ analysis_dir = Path(
     )
 )
 
-tab_run_cleaning, tab_cleaning, tab_analysis = st.tabs(
-    ["Run Cleaning", "Data Cleaning Results", "Image Analysis Results"]
+tab_run_cleaning, tab_cleaning, tab_run_analysis, tab_analysis = st.tabs(
+    ["Run Cleaning", "Data Cleaning Results", "Run Analysis", "Image Analysis Results"]
 )
 
 with tab_run_cleaning:
@@ -351,6 +352,55 @@ with tab_cleaning:
         ],
         key_prefix="audit_log",
     )
+
+with tab_run_analysis:
+    st.header("Run Image Analysis Pipeline")
+    show_transparency_note(
+        "This tab calls the existing run_analysis_pipeline(...) function. "
+        "Only records with record_status == valid are processed. "
+        "Processing steps, parameters, warnings and failures are exported to "
+        "processing_log.csv, root_measurements.csv and analysis_summary.csv."
+    )
+
+    with st.form("run_analysis_form"):
+        manifest_path = st.text_input(
+            "Clean manifest CSV path",
+            value=str(DEFAULT_CLEANING_DIR / "clean_manifest.csv"),
+        )
+        analysis_output_dir = st.text_input(
+            "Analysis output directory",
+            value=str(DEFAULT_ANALYSIS_DIR),
+        )
+        foreground = st.selectbox(
+            "Foreground direction",
+            options=["dark", "light"],
+            index=0,
+        )
+
+        submitted = st.form_submit_button("Run image analysis pipeline")
+
+    if submitted:
+        try:
+            measurements, processing_events, paths = run_analysis_pipeline(
+                manifest_path=manifest_path,
+                output_dir=analysis_output_dir,
+                foreground=foreground,
+            )
+
+            st.success("Image analysis pipeline finished.")
+            st.write(f"Measurement rows: {len(measurements)}")
+            st.write(f"Processing events: {len(processing_events)}")
+            st.json({key: str(value) for key, value in paths.items()})
+
+            st.info(
+                "To view these results in the Image Analysis Results tab, "
+                "set the sidebar Analysis output directory to the same output path."
+            )
+
+        except Exception as exc:
+            st.error("Image analysis pipeline failed.")
+            st.exception(exc)
+
 
 with tab_analysis:
     st.header("Image Analysis Results")
