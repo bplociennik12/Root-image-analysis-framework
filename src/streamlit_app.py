@@ -35,6 +35,10 @@ def format_summary_value(value: object) -> str:
     return f"{number:.3f}".rstrip("0").rstrip(".")
 
 
+def show_transparency_note(message: str) -> None:
+    st.info(message)
+
+
 def show_summary_metrics(
     path: Path,
     metric_names: list[str],
@@ -243,6 +247,11 @@ tab_cleaning, tab_analysis = st.tabs(["Data Cleaning Results", "Image Analysis R
 
 with tab_cleaning:
     st.header("Data Cleaning Results")
+    show_transparency_note(
+        "Cleaning results are shown from exported CSV files. "
+        "Accepted, rejected and flagged records should be traceable in "
+        "clean_manifest.csv, rejected_records.csv and audit_log.csv."
+    )
 
     cleaning_summary_path = cleaning_dir / "cleaning_summary.csv"
     show_summary_metrics(
@@ -294,6 +303,12 @@ with tab_cleaning:
 
 with tab_analysis:
     st.header("Image Analysis Results")
+    show_transparency_note(
+        "Image analysis processes only records with record_status == valid. "
+        "Measurements are reported in pixels unless scale calibration is provided. "
+        "Segmentation quality depends on image quality, contrast, background and parameters; "
+        "processing steps and parameters are recorded in processing_log.csv."
+    )
 
     analysis_summary_path = analysis_dir / "analysis_summary.csv"
     show_summary_metrics(
