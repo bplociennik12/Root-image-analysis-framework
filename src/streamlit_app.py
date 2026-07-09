@@ -20,6 +20,57 @@ def read_csv_if_exists(path: Path) -> pd.DataFrame | None:
     return pd.read_csv(path)
 
 
+def format_summary_value(value: object) -> str:
+    if pd.isna(value):
+        return ""
+
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+
+    if number.is_integer():
+        return str(int(number))
+
+    return f"{number:.3f}".rstrip("0").rstrip(".")
+
+
+def show_summary_metrics(
+    path: Path,
+    metric_names: list[str],
+) -> None:
+    df = read_csv_if_exists(path)
+
+    if df is None:
+        return
+
+    if not {"metric", "value"}.issubset(df.columns):
+        st.warning(f"Summary file has unexpected columns: {path}")
+        return
+
+    summary_values = dict(zip(df["metric"].astype(str), df["value"]))
+
+    available_metrics = [
+        metric_name
+        for metric_name in metric_names
+        if metric_name in summary_values
+    ]
+
+    if not available_metrics:
+        return
+
+    st.markdown("### Key metrics")
+
+    columns = st.columns(min(4, len(available_metrics)))
+
+    for index, metric_name in enumerate(available_metrics):
+        with columns[index % len(columns)]:
+            st.metric(
+                label=metric_name.replace("_", " "),
+                value=format_summary_value(summary_values[metric_name]),
+            )
+
+
 def filter_dataframe(
     df: pd.DataFrame,
     filter_columns: list[str],
@@ -193,9 +244,22 @@ tab_cleaning, tab_analysis = st.tabs(["Data Cleaning Results", "Image Analysis R
 with tab_cleaning:
     st.header("Data Cleaning Results")
 
+    cleaning_summary_path = cleaning_dir / "cleaning_summary.csv"
+    show_summary_metrics(
+        cleaning_summary_path,
+        metric_names=[
+            "total_records",
+            "valid_records",
+            "warning_records",
+            "rejected_records",
+            "missing_files",
+            "unsupported_formats",
+            "corrupted_images",
+        ],
+    )
     show_csv_section(
         "Cleaning summary",
-        cleaning_dir / "cleaning_summary.csv",
+        cleaning_summary_path,
     )
     show_csv_section(
         "Clean manifest",
@@ -231,9 +295,25 @@ with tab_cleaning:
 with tab_analysis:
     st.header("Image Analysis Results")
 
+    analysis_summary_path = analysis_dir / "analysis_summary.csv"
+    show_summary_metrics(
+        analysis_summary_path,
+        metric_names=[
+            "manifest_records",
+            "records_selected_for_analysis",
+            "records_skipped_not_valid",
+            "analysis_success",
+            "analysis_warning",
+            "analysis_failed",
+            "empty_masks",
+            "multiple_components",
+            "mean_area_px",
+            "mean_skeleton_length_px",
+        ],
+    )
     show_csv_section(
         "Analysis summary",
-        analysis_dir / "analysis_summary.csv",
+        analysis_summary_path,
     )
     show_csv_section(
         "Root measurements",
